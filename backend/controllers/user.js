@@ -5,7 +5,7 @@ import { redisClient } from "../index.js";
 import { User } from "../models/User.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto"; //inbuilt nodejs
-import {getOtpHtml,getVerifyEmailHtml} from "../config/html.js";
+import { getOtpHtml, getVerifyEmailHtml } from "../config/html.js";
 
 export const registerUser = TryCatch(async (req, res) => {
   const sanitezedBody = sanitize(req.body);
@@ -62,7 +62,7 @@ export const registerUser = TryCatch(async (req, res) => {
   await redisClient.set(verifyKey, datatoStore, { EX: 300 });
 
   const subject = "verify your email for Account creation";
-  const html = getVerifyEmailHtml({email,token});
+  const html = getVerifyEmailHtml({ email, token: verifyToken });
 
   await sendMail({ email, subject, html });
 
@@ -71,5 +71,48 @@ export const registerUser = TryCatch(async (req, res) => {
   res.json({
     message:
       "If your email is valid,a verification link has been sent.It will expire in 5 minutes.",
+  });
+});
+
+export const verifyUser = TryCatch(async (req, res) => {
+  const { token } = req.params;
+
+  if (!token) {
+    return res.status(400).json({
+      message: "Verification token is required.",
+    });
+  }
+
+  const verifyKey = `verify:${token}`;
+
+  const userDataJson = await redisClient.get(verifyKey);
+
+  if (!userDataJson) {
+    return res.status(400).json({
+      message: "Verification link is expired.",
+    });
+  }
+
+  await redisClient.del(verifyKey);
+
+  const userData = JSON.parse(userDataJson);
+
+  const existingUser = await User.findOne({ email: userData.email });
+
+  if (existingUser) {
+    return res.status(400).json({
+      message: "User allready exists.",
+    });
+  }
+
+  const newUser = await User.create({
+    name: userData.name,
+    email: userData.email,
+    password: userData.password,
+  });
+
+  res.status(201).json({
+    message: "Email verified succesfully. Your account has been created.",
+    user: { _id: newUser._id, name: newUser.name, email: newUser.email },
   });
 });
