@@ -1,4 +1,4 @@
-import { registerSchema } from "../config/zod.js";
+import { registerSchema,loginSchema } from "../config/zod.js";
 import TryCatch from "../middlewares/TryCatch.js";
 import sanitize from "mongo-sanitize";
 import { redisClient } from "../index.js";
@@ -115,4 +115,67 @@ export const verifyUser = TryCatch(async (req, res) => {
     message: "Email verified succesfully. Your account has been created.",
     user: { _id: newUser._id, name: newUser.name, email: newUser.email },
   });
+});
+
+
+export const loginUser = TryCatch(async(req,res)=>{
+  const sanitezedBody = sanitize(req.body);
+
+  const validation = loginSchema.safeParse(sanitezedBody);
+
+  if (!validation.success) {
+    const zodError = validation.error;
+
+    let firstErrorMessage = "Validation failed";
+    let allErrors = [];
+    if (zodError?.issues && Array.isArray(zodError.issues)) {
+      allErrors = zodError.issues.map((issue) => ({
+        field: issue.path ? issue.path.join(".") : "unknown",
+        message: issue.message || "Validation  Error",
+        code: issue.code,
+      }));
+
+      firstErrorMessage = allErrors[0]?.message || "Validation Error";
+    }
+    return res.status({ message: firstErrorMessage, error: allErrors });
+  }
+
+  const { email, password } = validation.data;
+
+  const rateLimitKey = `login-rate-limit:${req.ip}:${email}`;
+
+  if (await redisClient.get(rateLimitKey)) {
+    return res.status(429).json({
+      message: "To many requests, try again later",
+    });
+  }
+
+  const user = await User.findOne({email});
+
+  if(!user){
+    return res.status(400).json({message:"Invalid credentials"});
+  }
+
+  const comparePassword = await bcrypt.compare(password,user.password);
+
+  if(!comparePassword){
+    return res.status(400).json({message:"Invalid credentials"});
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 90000).toString();
+
+  const otpKey = `otp:${email}`;
+
+  await redisClient.set(otpKey,JSON.stringify(otp),{EX:300});
+
+  const subject = "Otp for verification";
+
+  const html = getOtpHtml({email,otp});
+
+  await sendMail({email,subject,html});
+
+  await redisClient.set(rateLimitKey,"true",{EX:60});
+
+  res.json({message:"If your email is valid, an otp has been sent.It will be valid for five minutes."})
+
 });
