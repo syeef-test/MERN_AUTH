@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import connectDb from "./config/db.js";
 import userRoutes from "./routes/user.js";
 import { createClient } from "redis";
+import cookieParser from "cookie-parser";
 dotenv.config();
 
 const redisUrl = process.env.REDIS_URL;
@@ -27,6 +28,7 @@ const PORT = process.env.PORT || 5000;
 
 //Middlewares
 app.use(express.json());
+app.use(cookieParser());
 
 //Routes
 app.use("/api/v1", userRoutes);

@@ -7,7 +7,11 @@ import bcrypt from "bcrypt";
 import crypto from "crypto"; //inbuilt nodejs
 import { getOtpHtml, getVerifyEmailHtml } from "../config/html.js";
 import sendMail from "../config/sendMail.js";
-import { generateToken } from "../config/generateToken.js";
+import {
+  generateAccessToken,
+  generateToken,
+  verifyRefreshToken,
+} from "../config/generateToken.js";
 
 export const registerUser = TryCatch(async (req, res) => {
   const sanitezedBody = sanitize(req.body);
@@ -210,7 +214,31 @@ export const verifyOtp = TryCatch(async (req, res) => {
 
   let user = await User.findOne({ email });
 
-  const tokenData = await generateToken(user._id,res )
+  const tokenData = await generateToken(user._id, res);
 
-  res.status(200).json({message:`Welcome ${user.name}`,user})
+  res.status(200).json({ message: `Welcome ${user.name}`, user });
+});
+
+export const myProfile = TryCatch(async (req, res) => {
+  const user = req.user;
+
+  res.json(user);
+});
+
+export const refreshToken = TryCatch(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: "Invalid refresh token." });
+  }
+
+  const decode = await verifyRefreshToken(refreshToken);
+
+  if (!decode) {
+    return res.status(400).json({ message: "Invalid refresh token." });
+  }
+
+  generateAccessToken(decode.id, res);
+
+  res.status(200).json({ message: "Token refreshed." });
 });
