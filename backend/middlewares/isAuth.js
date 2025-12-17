@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
-import {redisClient} from "../index.js";
+import { redisClient } from "../index.js";
 import { User } from "../models/User.js";
 
-export const isAuth = async (req, resizeBy, next) => {
+export const isAuth = async (req, res, next) => {
   try {
     const token = req.cookies.accessToken;
 

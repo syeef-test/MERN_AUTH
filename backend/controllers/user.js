@@ -10,6 +10,7 @@ import sendMail from "../config/sendMail.js";
 import {
   generateAccessToken,
   generateToken,
+  revokeRefershToken,
   verifyRefreshToken,
 } from "../config/generateToken.js";
 
@@ -241,4 +242,17 @@ export const refreshToken = TryCatch(async (req, res) => {
   generateAccessToken(decode.id, res);
 
   res.status(200).json({ message: "Token refreshed." });
+});
+
+export const logoutUser = TryCatch(async (req, res) => {
+  const userId = req.user._id;
+
+  await revokeRefershToken(userId);
+
+  res.clearCookie("refreshToken");
+  res.clearCookie("accessToken");
+
+  await redisClient.del(`user:${userId}`);
+
+  res.status(200).json({ message: "Logged out successfully." });
 });

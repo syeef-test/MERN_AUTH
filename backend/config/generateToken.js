@@ -58,6 +58,8 @@ export const generateAccessToken = (id, res) => {
     sameSite: "strict",
     maxAge: 1 * 60 * 1000,
   });
+};
 
- 
+export const revokeRefershToken = async (userId) => {
+  await redisClient.del(`refresh_token:${userId}`);
 };
