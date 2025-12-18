@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { server } from "../main";
@@ -8,6 +8,8 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [btnLoading, setBtnLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const submitHandler = async (e) => {
     setBtnLoading(true);
@@ -18,6 +20,8 @@ function Login() {
         password,
       });
       toast.success(data.message);
+      localStorage.setItem("email", email);
+      navigate("/verifyotp");
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
