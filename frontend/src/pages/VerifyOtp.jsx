@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { server } from "../main";
+import { server } from "../config/config.js";
 function VerifyOtp() {
   const [otp, setOtp] = useState("");
   const [btnLoading, setBtnLoading] = useState(false);

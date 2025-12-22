@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import server from "../main";
+import { server } from "../config/config.js";
+
 import axios from "axios";
 
 const AppContext = createContext(null);
 
-export const AppProvider = ({ children }) => {
+const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuth, setIsAuth] = useState(false);
@@ -42,3 +43,5 @@ export const AppData = () => {
   if (!context) throw new Error("AppData must be used within an Appprovider");
   return context;
 };
+
+export default AppProvider;
