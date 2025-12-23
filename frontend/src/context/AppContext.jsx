@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { server } from "../config/config.js";
 
+import { toast } from "react-toastify";
 
 import api from "../apiIntercepter.js";
 
@@ -29,8 +29,19 @@ const AppProvider = ({ children }) => {
     fetchUser();
   }, []);
 
+  async function logoutUser(){
+    try {
+      const {data} = await api.post("/api/v1/logout");
+      toast.success(data.message);
+      setIsAuth(false);
+      setUser(null);
+     } catch (error) {
+      toast.error("Something went wrong")
+    }
+  }
+
   return (
-    <AppContext.Provider value={{ setIsAuth, isAuth, user, setUser, loading }}>
+    <AppContext.Provider value={{ setIsAuth, isAuth, user, setUser, loading,logoutUser }}>
       {children}
     </AppContext.Provider>
   );
