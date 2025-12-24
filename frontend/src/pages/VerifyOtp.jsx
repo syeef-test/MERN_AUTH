@@ -3,9 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { server } from "../config/config.js";
+import { AppData } from "../context/AppContext.jsx";
 function VerifyOtp() {
   const [otp, setOtp] = useState("");
   const [btnLoading, setBtnLoading] = useState(false);
+  const navigate = useNavigate();
+  const { setIsAuth, setUser } = AppData();
 
   const submitHandler = async (e) => {
     setBtnLoading(true);
@@ -23,6 +26,8 @@ function VerifyOtp() {
       );
 
       toast.success(data.message);
+      setIsAuth(true);
+      setUser(data.user);
       localStorage.clear("email");
     } catch (error) {
       toast.error(error.response.data.message);
