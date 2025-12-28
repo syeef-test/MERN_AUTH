@@ -31,7 +31,7 @@ export const generateToken = async (id, res) => {
     partitioned: true,
   });
 
-  const csrfToken = await generaateCSRFToken(id, res);
+  const csrfToken = await generateCSRFToken(id, res);
 
   return { accessToken, refreshToken, csrfToken };
 };

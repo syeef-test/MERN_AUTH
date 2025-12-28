@@ -13,7 +13,8 @@ import {
   revokeRefershToken,
   verifyRefreshToken,
 } from "../config/generateToken.js";
-import { generateCSRFToken } from "../config/csrfMiddleware.js";
+import { generateCSRFToken, revokeCSRFTOKEN } from "../config/csrfMiddleware.js";
+
 
 export const registerUser = TryCatch(async (req, res) => {
   const sanitezedBody = sanitize(req.body);
@@ -34,7 +35,7 @@ export const registerUser = TryCatch(async (req, res) => {
 
       firstErrorMessage = allErrors[0]?.message || "Validation Error";
     }
-    return res.status({ message: firstErrorMessage, error: allErrors });
+    return res.status(400).json({ message: firstErrorMessage, error: allErrors });
   }
 
   const { name, email, password } = validation.data;
@@ -52,13 +53,11 @@ export const registerUser = TryCatch(async (req, res) => {
   });
 
   if (existingUser) {
-    res.status(400).json({ message: "User allready exist" });
+    return res.status(400).json({ message: "User allready exist" });
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
-
   const verifyToken = crypto.randomBytes(32).toString("hex");
-
   const verifyKey = `verify:${verifyToken}`;
 
   const datatoStore = JSON.stringify({
@@ -104,12 +103,11 @@ export const verifyUser = TryCatch(async (req, res) => {
   await redisClient.del(verifyKey);
 
   const userData = JSON.parse(userDataJson);
-
   const existingUser = await User.findOne({ email: userData.email });
 
   if (existingUser) {
     return res.status(400).json({
-      message: "User allready exists.",
+      message: "User already exists.",
     });
   }
 
@@ -144,7 +142,7 @@ export const loginUser = TryCatch(async (req, res) => {
 
       firstErrorMessage = allErrors[0]?.message || "Validation Error";
     }
-    return res.status({ message: firstErrorMessage, error: allErrors });
+    return res.status(400).json({ message: firstErrorMessage, error: allErrors });
   }
 
   const { email, password } = validation.data;
@@ -170,15 +168,11 @@ export const loginUser = TryCatch(async (req, res) => {
   }
 
   const otp = Math.floor(100000 + Math.random() * 90000).toString();
-
   const otpKey = `otp:${email}`;
 
   await redisClient.set(otpKey, JSON.stringify(otp), { EX: 300 });
-
   const subject = "Otp for verification";
-
   const html = getOtpHtml({ email, otp });
-
   await sendMail({ email, subject, html });
 
   await redisClient.set(rateLimitKey, "true", { EX: 60 });
@@ -218,7 +212,10 @@ export const verifyOtp = TryCatch(async (req, res) => {
 
   const tokenData = await generateToken(user._id, res);
 
-  res.status(200).json({ message: `Welcome ${user.name}`, user });
+  //gen csrf token and add to header so it can be stored in session storage
+  const csrfToken = await generateCSRFToken(user._id, res);
+
+  res.status(200).json({ message: `Welcome ${user.name}`, user,csrfToken });
 });
 
 export const myProfile = TryCatch(async (req, res) => {
@@ -246,13 +243,15 @@ export const refreshToken = TryCatch(async (req, res) => {
 });
 
 export const logoutUser = TryCatch(async (req, res) => {
+ 
   const userId = req.user._id;
-
+  
   await revokeRefershToken(userId);
-
+  await revokeCSRFTOKEN(userId);
+  
   res.clearCookie("refreshToken");
   res.clearCookie("accessToken");
-  res.clearCookie("csrfToken");
+  
 
   await redisClient.del(`user:${userId}`);
 
@@ -263,9 +262,11 @@ export const refreshCSRF = TryCatch(async (req, res) => {
   const userId = req.user._id;
 
   const newCSRFToken = await generateCSRFToken(userId, res);
-
+  
   res.json({
     message: "CSRF token refreshed succesfully",
     csrfToken: newCSRFToken,
   });
+
+  
 });

@@ -8,6 +8,7 @@ import {
   myProfile,
   refreshToken,
   logoutUser,
+  refreshCSRF,
 } from "../controllers/user.js";
 
 import { isAuth } from "../middlewares/isAuth.js";
@@ -22,5 +23,6 @@ router.post("/verify", verifyOtp);
 router.get("/me", isAuth, myProfile);
 router.post("/refresh", refreshToken);
 router.post("/logout", isAuth,verifyCSRFToken, logoutUser);
+router.post("/refresh-csrf",isAuth,refreshCSRF);
 
 export default router;

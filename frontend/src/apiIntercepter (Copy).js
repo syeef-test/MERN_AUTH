@@ -1,10 +1,83 @@
 import axios from "axios";
 import { server } from "./config/config.js";
 
+// const getCookie = (name) => {
+//   const value = `;${document.cookie}`;
+//   const parts = value.split(";${name}=");
+
+//   if (parts.length === 2) {
+//     return parts.pop().split(";").shift();
+//   }
+// };
+
+const getCookie = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop().split(";").shift();
+  }
+};
+
 const api = axios.create({
   baseURL: server,
   withCredentials: true,
 });
+
+// api.interceptors.request.use(
+//   (config) => {
+//     console.log("Interceptor running:", config.method, config.url);
+//     if (
+//       config.method === "post" ||
+//       config.method === "put" ||
+//       config.method === "delete"
+//     ) {
+//       const csrfToken = getCookie("csrfToken");
+//       console.log("csrfToken", csrfToken);
+//       if (csrfToken) {
+//         config.headers["x-csrf-token"] = csrfToken;
+//       }
+//     }
+
+//     return config;
+//   },
+//   (error) => {
+//     console.log(error);
+//     return Promise.reject(error);
+//   }
+// );
+
+
+api.interceptors.response.use((response) => {
+    
+  const csrfFromHeader = response.headers["x-csrf-token"];
+  const csrfFromBody = response.data?.csrfToken;
+
+  console.log("🔵 INTERCEPTOR RESPONSE HEADERS:", response.headers);
+  console.log("🔵 CSRF HEADER:", response.headers["x-csrf-token"]);
+
+  console.log("🔵 INTERCEPTOR RESPONSE DATA:", response?.data);
+  console.log("🔵 CSRF RESPONSE DATA:", csrfFromBody);
+
+  const csrf = csrfFromHeader || csrfFromBody;
+
+  if (csrf) {
+    sessionStorage.setItem("csrfToken", csrf);
+  }
+
+  return response;
+});
+
+api.interceptors.request.use((config) => {
+  if (["post", "put", "delete"].includes(config.method)) {
+    const csrfToken = sessionStorage.getItem("csrfToken");
+    if (csrfToken) {
+      config.headers["x-csrf-token"] = csrfToken;
+    }
+  }
+  return config;
+});
+
+
 
 let isRefreshing = false;
 let isRefreshingCSRFToken = false;
@@ -33,20 +106,8 @@ const processCSRFQueue = (error, token = null) => {
   csrfFailedQueue = [];
 };
 
-// Combined response interceptor to avoid overwriting
 api.interceptors.response.use(
-  (response) => {
-    // Extract CSRF token from response
-    const csrfFromHeader = response.headers["x-csrf-token"];
-    const csrfFromBody = response.data?.csrfToken;
-    const csrf = csrfFromHeader || csrfFromBody;
-    
-    if (csrf) {
-      sessionStorage.setItem("csrfToken", csrf);
-    }
-    
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
@@ -54,15 +115,12 @@ api.interceptors.response.use(
       const errorCode = error.response.data?.code || "";
 
       if (errorCode.startsWith("CSRF_")) {
-        // Handle CSRF token refresh
         if (isRefreshingCSRFToken) {
           return new Promise((resolve, reject) => {
             csrfFailedQueue.push({ resolve, reject });
           }).then(() => api(originalRequest));
         }
-        
         originalRequest._retry = true;
-        originalRequest._csrfRetry = true; // Add separate flag for CSRF retry
         isRefreshingCSRFToken = true;
 
         try {
@@ -71,20 +129,20 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (error) {
           processCSRFQueue(error);
-          console.error("Failed to refresh CSRF token", error);
+          console.error("Failed to refresh csrf token", error);
           return Promise.reject(error);
         } finally {
           isRefreshingCSRFToken = false;
         }
       }
 
-      // Handle access token refresh (non-CSRF 403 errors)
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(() => api(originalRequest));
+        }).then(() => {
+          return api(originalRequest);
+        });
       }
-      
       originalRequest._retry = true;
       isRefreshing = true;
 
@@ -102,16 +160,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Request interceptor
-api.interceptors.request.use((config) => {
-  if (["post", "put", "delete", "patch"].includes(config.method?.toLowerCase())) {
-    const csrfToken = sessionStorage.getItem("csrfToken");
-    if (csrfToken) {
-      config.headers["x-csrf-token"] = csrfToken;
-    }
-  }
-  return config;
-});
 
 export default api;

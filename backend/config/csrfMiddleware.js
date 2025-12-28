@@ -8,12 +8,15 @@ export const generateCSRFToken = async (userId, res) => {
 
   await redisClient.setEx(csrfKey, 3600, csrfToken);
 
-  res.cookie("csrfToken", csrfToken, {
-    httpOnly: false,
-    secure: true,
-    sameSite: "none",
-    maxAge: 60 * 60 * 1000,
-  });
+  // const isProd = process.env.NODE_ENV === "production";
+  // res.cookie("csrfToken", csrfToken, {
+  //   httpOnly: false,
+  //   secure: isProd ? true : false,//true change
+  //   sameSite: isProd ? "none" : "lax",
+  //   maxAge: 60 * 60 * 1000,
+  // });
+  //res.setHeader("X-CSRF-Token", csrfToken);
+  res.setHeader("x-csrf-token", csrfToken);
 
   return csrfToken;
 };
@@ -25,18 +28,20 @@ export const verifyCSRFToken = async (req, res, next) => {
     }
 
     const userId = req.user?._id;
-
+    //console.log("verifyCSRFToken called",userId);
     if (!userId) {
       return res.status(401).json({
         message: "User not authenticated",
       });
     }
+   
+    //console.log("HEADERS:", req.headers);
 
     const clientToken =
       req.headers["x-csrf-token"] ||
       req.headers["x-xsrf-token"] ||
       req.headers["csrf-token"];
-
+   
     if (!clientToken) {
       return res.status(403).json({
         message: "CSRF Token missing. Please refresh the page.",

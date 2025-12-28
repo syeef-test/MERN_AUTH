@@ -29,12 +29,14 @@ const AppProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  async function logoutUser(){
+  async function logoutUser(navigate){
     try {
       const {data} = await api.post("/api/v1/logout");
       toast.success(data.message);
+      sessionStorage.removeItem("csrfToken");
       setIsAuth(false);
       setUser(null);
+      navigate("/login")
      } catch (error) {
       toast.error("Something went wrong")
     }

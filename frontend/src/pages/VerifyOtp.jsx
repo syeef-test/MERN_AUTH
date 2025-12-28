@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { server } from "../config/config.js";
 import { AppData } from "../context/AppContext.jsx";
+import api from "../apiIntercepter.js";
 function VerifyOtp() {
   const [otp, setOtp] = useState("");
   const [btnLoading, setBtnLoading] = useState(false);
@@ -16,7 +17,7 @@ function VerifyOtp() {
 
     const email = localStorage.getItem("email");
     try {
-      const { data } = await axios.post(
+      const { data } = await api.post(
         `${server}/api/v1/verify`,
         {
           email,
@@ -24,7 +25,7 @@ function VerifyOtp() {
         },
         { withCredentials: true }
       );
-
+      //console.log("data",data);
       toast.success(data.message);
       setIsAuth(true);
       setUser(data.user);

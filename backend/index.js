@@ -33,6 +33,7 @@ app.use(cookieParser());
 app.use(cors({
   origin:process.env.FRONTEND_URL,
   credentials:true,
+  exposedHeaders: ["X-CSRF-Token"],//needed to expose header in frontend 
   methods:["GET","POST","PUT","DELETE","OPTIONS"]
 }));
 
