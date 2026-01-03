@@ -8,27 +8,15 @@ export const isAuth = async (req, res, next) => {
     const token = req.cookies.accessToken;
 
     if (!token) {
-      return res.status(401).json({
-        message: "Please login",
+      return res.status(403).json({
+        message: "Please Login - no token",
       });
     }
 
     const decodedData = jwt.verify(token, process.env.JWT_SECRET);
 
     if (!decodedData) {
-      return res.status(401).json({ message: "Invalid token" });
-    }
-
-    // Check if session still exists
-    const sessionData = await redisClient.get(
-      `session:${decodedData.sessionId}`
-    );
-    if (!sessionData) {
-      res.clearCookie("refreshToken");
-      res.clearCookie("accessToken");
-      return res.status(401).json({
-        message: "Session expired. Please login again.",
-      });
+      return res.status(400).json({ message: "token expired" });
     }
 
     const sessionActive = await isSessionActive(
@@ -37,16 +25,15 @@ export const isAuth = async (req, res, next) => {
     );
 
     if (!sessionActive) {
-      
-      await redisClient.del(`session:${decodedData.sessionId}`);
+      res.clearCookie("refreshToken");////
+      res.clearCookie("accessToken"); ////
 
-      res.clearCookie("refreshToken");
-      res.clearCookie("accessToken");
-
-      return res.status(401).json({
-        message:
-          "Session expired. You have been logged in from another device.",
-      });
+      return res
+        .status(401)
+        .json({
+          message:
+            "Session expired. You have been logged in from another device.",
+        });
     }
 
     const cacheUser = await redisClient.get(`user:${decodedData.id}`);
@@ -69,17 +56,7 @@ export const isAuth = async (req, res, next) => {
     req.sessionId = decodedData.sessionId;
     next();
   } catch (error) {
-    // Handle JWT errors
-    if (
-      error.name === "JsonWebTokenError" ||
-      error.name === "TokenExpiredError"
-    ) {
-      res.clearCookie("accessToken");
-      return res
-        .status(401)
-        .json({ message: "Session expired. Please login again." });
-    }
-    res.status(500).json({ message: error.message });
+    res.status(500), json({ message: error.message });
   }
 };
 

@@ -30,6 +30,7 @@ function VerifyOtp() {
       setIsAuth(true);
       setUser(data.user);
       localStorage.clear("email");
+      navigate("/");//
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {

@@ -13,20 +13,20 @@ function Verify() {
 
   async function verifyUser() {
     try {
-      console.log("params",params)
-      const { data } = await axios.post(`${server}/api/v1/verify/${params.token}`);
+      const { data } = await axios.post(
+        `${server}/api/v1/verify/${params.token}`
+      );
       setSuccessMessage(data.message);
     } catch (error) {
-      console.log("error",error);
       setErrorMessage(error.response.data.message);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     verifyUser();
-  },[])
+  }, []);
 
   return (
     <>
@@ -42,7 +42,6 @@ function Verify() {
           )}
         </div>
       )}
-      
     </>
   );
 }

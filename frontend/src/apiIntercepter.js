@@ -50,9 +50,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 403 && !originalRequest._retry) {
+    if ((error.response?.status === 403) && !originalRequest._retry) {
       const errorCode = error.response.data?.code || "";
 
+       // Handle CSRF token errors (403)
       if (errorCode.startsWith("CSRF_")) {
         // Handle CSRF token refresh
         if (isRefreshingCSRFToken) {

@@ -7,10 +7,10 @@ export const generateToken = async (id, res) => {
   const sessionId = crypto.randomBytes(16).toString("hex");
 
   const accessToken = jwt.sign({ id, sessionId }, process.env.JWT_SECRET, {
-    expiresIn: "3m",
+    expiresIn: "15m",
   });
 
-  const refreshToken = jwt.sign({ id, sessionId }, process.env.REFRESH_SECRET, {
+  const refreshToken = jwt.sign({ id, sessionId }, process.env.REFRESH_SCCRET, {
     expiresIn: "7d",
   });
 
@@ -20,11 +20,9 @@ export const generateToken = async (id, res) => {
 
   const existingSession = await redisClient.get(activeSessionKey);
   if (existingSession) {
-    await Promise.all([
-      redisClient.del(`session:${existingSession}`),
-      redisClient.del(refreshTokenKey),
-      redisClient.del(`csrf:${id}`) 
-    ]);
+    await redisClient.del(`session:${existingSession}`);
+    await redisClient.del(`refresh_token:${id}`);//
+    await redisClient.del(`csrf:${id}`);//
   }
 
   const sessionData = {
@@ -46,30 +44,34 @@ export const generateToken = async (id, res) => {
     httpOnly: true,
     secure: true,
     sameSite: "none",
-    maxAge: 3 * 60 * 1000,
+    maxAge: 15 * 60 * 1000,
     partitioned: true,
   });
 
   res.cookie("refreshToken", refreshToken, {
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
     sameSite: "none",
     secure: true,
     partitioned: true,
   });
 
-  
+  const csrfToken = await generateCSRFToken(id, res);
 
-  return { accessToken, refreshToken, sessionId };
+  return { accessToken, refreshToken, csrfToken, sessionId };
 };
 
 export const verifyRefreshToken = async (refreshToken) => {
   try {
-    const decode = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+    const decode = jwt.verify(refreshToken, process.env.REFRESH_SCCRET);
 
     const storedToken = await redisClient.get(`refresh_token:${decode.id}`);
 
-   
+    // if (storedToken === refreshToken) {
+    //   return decode;
+    // }
+
+    // return null;
 
     if (storedToken !== refreshToken) {
       return null;
@@ -94,15 +96,9 @@ export const verifyRefreshToken = async (refreshToken) => {
 
     await redisClient.setEx(
       `session:${decode.sessionId}`,
-      7 * 24 * 60 * 60,
+      7 * 24 * 60 * 60 * 1000,
       JSON.stringify(parsedSessionData)
     );
-
-    await redisClient.setEx(
-      `active_session:${decode.id}`,
-       7 * 24 * 60 * 60,
-      activeSessionId
-    );//
 
     return decode;
   } catch (error) {
@@ -119,7 +115,7 @@ export const generateAccessToken = (id, sessionId, res) => {
     httpOnly: true,
     secure: true,
     sameSite: "none",
-    maxAge: 3 * 60 * 1000,
+    maxAge: 15 * 60 * 1000,
     partitioned: true,
   });
 };

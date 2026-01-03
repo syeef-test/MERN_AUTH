@@ -16,10 +16,13 @@ const AppProvider = ({ children }) => {
     try {
       const { data } = await api.get(`api/v1/me`);
 
-      setUser(data);
+      setUser(data.user);//
       setIsAuth(true);
     } catch (error) {
+
       console.log(error);
+      setUser(null);//
+      setIsAuth(false);//
     } finally {
       setLoading(false);
     }
@@ -34,6 +37,7 @@ const AppProvider = ({ children }) => {
       const {data} = await api.post("/api/v1/logout");
       toast.success(data.message);
       sessionStorage.removeItem("csrfToken");
+      localStorage.clear();
       setIsAuth(false);
       setUser(null);
       navigate("/login")

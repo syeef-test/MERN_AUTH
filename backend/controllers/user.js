@@ -13,8 +13,10 @@ import {
   revokeRefershToken,
   verifyRefreshToken,
 } from "../config/generateToken.js";
-import { generateCSRFToken, revokeCSRFTOKEN } from "../config/csrfMiddleware.js";
-
+import {
+  generateCSRFToken,
+  revokeCSRFTOKEN,
+} from "../config/csrfMiddleware.js";
 
 export const registerUser = TryCatch(async (req, res) => {
   const sanitezedBody = sanitize(req.body);
@@ -35,7 +37,9 @@ export const registerUser = TryCatch(async (req, res) => {
 
       firstErrorMessage = allErrors[0]?.message || "Validation Error";
     }
-    return res.status(400).json({ message: firstErrorMessage, error: allErrors });
+    return res
+      .status(400)
+      .json({ message: firstErrorMessage, error: allErrors });
   }
 
   const { name, email, password } = validation.data;
@@ -142,7 +146,9 @@ export const loginUser = TryCatch(async (req, res) => {
 
       firstErrorMessage = allErrors[0]?.message || "Validation Error";
     }
-    return res.status(400).json({ message: firstErrorMessage, error: allErrors });
+    return res
+      .status(400)
+      .json({ message: firstErrorMessage, error: allErrors });
   }
 
   const { email, password } = validation.data;
@@ -214,14 +220,40 @@ export const verifyOtp = TryCatch(async (req, res) => {
 
   //gen csrf token and add to header so it can be stored in session storage
   const csrfToken = await generateCSRFToken(user._id, res);
-
-  res.status(200).json({ message: `Welcome ${user.name}`, user,csrfToken });
+  ////
+  res
+    .status(200)
+    .json({
+      message: `Welcome ${user.name}`,
+      user,
+      sessionInfo: {
+        sessionId: tokenData.sessionId,
+        loginTime: new Date().toISOString(),
+        csrfToken: tokenData.csrfToken,
+      },
+      csrfToken,
+    });
 });
 
 export const myProfile = TryCatch(async (req, res) => {
   const user = req.user;
 
-  res.json(user);
+  const sessionId = req.sessionId;
+
+  const sessionData = await redisClient.get(`session:${sessionId}`);
+
+  let sessionInfo = null;
+
+  if(sessionData){
+    const parsedSession = JSON.parse(sessionData);
+    sessionInfo ={
+      sessionId,
+      loginTime:parsedSession.createdAt,
+      lastActivity:parsedSession.lastActivity
+    }
+  }
+
+  res.json({user,sessionInfo});
 });
 
 export const refreshToken = TryCatch(async (req, res) => {
@@ -234,24 +266,25 @@ export const refreshToken = TryCatch(async (req, res) => {
   const decode = await verifyRefreshToken(refreshToken);
 
   if (!decode) {
-    return res.status(400).json({ message: "Invalid refresh token." });
+    //
+    res.clearCookie("refreshToken");
+    res.clearCookie("accessToken");
+    return res.status(400).json({ message: "Session expired.Please login again." });
   }
 
-  generateAccessToken(decode.id, res);
+  generateAccessToken(decode.id,decode.sessionId, res);
 
   res.status(200).json({ message: "Token refreshed." });
 });
 
 export const logoutUser = TryCatch(async (req, res) => {
- 
   const userId = req.user._id;
-  
+
   await revokeRefershToken(userId);
   await revokeCSRFTOKEN(userId);
-  
+
   res.clearCookie("refreshToken");
   res.clearCookie("accessToken");
-  
 
   await redisClient.del(`user:${userId}`);
 
@@ -262,11 +295,13 @@ export const refreshCSRF = TryCatch(async (req, res) => {
   const userId = req.user._id;
 
   const newCSRFToken = await generateCSRFToken(userId, res);
-  
+
   res.json({
     message: "CSRF token refreshed succesfully",
     csrfToken: newCSRFToken,
   });
+});
 
-  
+export const adminController = TryCatch(async (req, res) => {
+  res.json({ message: "Hello admin." });
 });

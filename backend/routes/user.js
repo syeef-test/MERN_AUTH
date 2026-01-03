@@ -9,9 +9,10 @@ import {
   refreshToken,
   logoutUser,
   refreshCSRF,
+  adminController,
 } from "../controllers/user.js";
 
-import { isAuth } from "../middlewares/isAuth.js";
+import { authorizedAdmin, isAuth } from "../middlewares/isAuth.js";
 import { verifyCSRFToken } from "../config/csrfMiddleware.js";
 
 const router = express.Router();
@@ -24,5 +25,7 @@ router.get("/me", isAuth, myProfile);
 router.post("/refresh", refreshToken);
 router.post("/logout", isAuth,verifyCSRFToken, logoutUser);
 router.post("/refresh-csrf",isAuth,refreshCSRF);
+router.get("/admin",isAuth,authorizedAdmin,adminController);
 
 export default router;
+
