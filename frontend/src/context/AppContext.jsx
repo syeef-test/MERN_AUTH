@@ -16,13 +16,12 @@ const AppProvider = ({ children }) => {
     try {
       const { data } = await api.get(`api/v1/me`);
 
-      setUser(data.user);//
+      setUser(data.user); //
       setIsAuth(true);
     } catch (error) {
-
       console.log(error);
-      setUser(null);//
-      setIsAuth(false);//
+      setUser(null); //
+      setIsAuth(false); //
     } finally {
       setLoading(false);
     }
@@ -32,22 +31,24 @@ const AppProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  async function logoutUser(navigate){
+  async function logoutUser(navigate) {
     try {
-      const {data} = await api.post("/api/v1/logout");
+      const { data } = await api.post("/api/v1/logout");
       toast.success(data.message);
       sessionStorage.removeItem("csrfToken");
       localStorage.clear();
       setIsAuth(false);
       setUser(null);
-      navigate("/login")
-     } catch (error) {
-      toast.error("Something went wrong")
+      navigate("/login");
+    } catch (error) {
+      toast.error("Something went wrong");
     }
   }
 
   return (
-    <AppContext.Provider value={{ setIsAuth, isAuth, user, setUser, loading,logoutUser }}>
+    <AppContext.Provider
+      value={{ setIsAuth, isAuth, user, setUser, loading, logoutUser }}
+    >
       {children}
     </AppContext.Provider>
   );

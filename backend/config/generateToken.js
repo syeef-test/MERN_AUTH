@@ -7,7 +7,7 @@ export const generateToken = async (id, res) => {
   const sessionId = crypto.randomBytes(16).toString("hex");
 
   const accessToken = jwt.sign({ id, sessionId }, process.env.JWT_SECRET, {
-    expiresIn: "3m",
+    expiresIn: "15m",
   });
 
   const refreshToken = jwt.sign({ id, sessionId }, process.env.REFRESH_SECRET, {
@@ -46,7 +46,7 @@ export const generateToken = async (id, res) => {
     httpOnly: true,
     secure: true,
     sameSite: "none",
-    maxAge: 3 * 60 * 1000,
+    maxAge: 15 * 60 * 1000,
     partitioned: true,
   });
 
@@ -119,7 +119,7 @@ export const generateAccessToken = (id, sessionId, res) => {
     httpOnly: true,
     secure: true,
     sameSite: "none",
-    maxAge: 3 * 60 * 1000,
+    maxAge: 15 * 60 * 1000,
     partitioned: true,
   });
 };

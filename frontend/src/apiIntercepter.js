@@ -40,20 +40,20 @@ api.interceptors.response.use(
     const csrfFromHeader = response.headers["x-csrf-token"];
     const csrfFromBody = response.data?.csrfToken;
     const csrf = csrfFromHeader || csrfFromBody;
-    
+
     if (csrf) {
       sessionStorage.setItem("csrfToken", csrf);
     }
-    
+
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
-    if ((error.response?.status === 403) && !originalRequest._retry) {
+    if (error.response?.status === 403 && !originalRequest._retry) {
       const errorCode = error.response.data?.code || "";
 
-       // Handle CSRF token errors (403)
+      // Handle CSRF token errors (403)
       if (errorCode.startsWith("CSRF_")) {
         // Handle CSRF token refresh
         if (isRefreshingCSRFToken) {
@@ -61,7 +61,7 @@ api.interceptors.response.use(
             csrfFailedQueue.push({ resolve, reject });
           }).then(() => api(originalRequest));
         }
-        
+
         originalRequest._retry = true;
         originalRequest._csrfRetry = true; // Add separate flag for CSRF retry
         isRefreshingCSRFToken = true;
@@ -85,7 +85,7 @@ api.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         }).then(() => api(originalRequest));
       }
-      
+
       originalRequest._retry = true;
       isRefreshing = true;
 
@@ -106,7 +106,9 @@ api.interceptors.response.use(
 
 // Request interceptor
 api.interceptors.request.use((config) => {
-  if (["post", "put", "delete", "patch"].includes(config.method?.toLowerCase())) {
+  if (
+    ["post", "put", "delete", "patch"].includes(config.method?.toLowerCase())
+  ) {
     const csrfToken = sessionStorage.getItem("csrfToken");
     if (csrfToken) {
       config.headers["x-csrf-token"] = csrfToken;
