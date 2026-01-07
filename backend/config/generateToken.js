@@ -51,7 +51,7 @@ export const generateToken = async (id, res) => {
   });
 
   res.cookie("refreshToken", refreshToken, {
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
     sameSite: "none",
     secure: true,

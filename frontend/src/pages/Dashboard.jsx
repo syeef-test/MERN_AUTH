@@ -11,6 +11,7 @@ function Dashboard() {
       });
 
       setContent(data.message);
+      console.log(data)
     } catch (error) {
       toast.error(error.response.data.message);
     }
